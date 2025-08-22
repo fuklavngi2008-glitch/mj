@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ระบบเช็คชื่อเข้าออกห้องคอม (Local Storage)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FFFBEB; /* Light yellow background */
+            color: #333;
+        }
+        .header-title {
+            font-size: 3rem; /* Extra large for main title */
+            font-weight: 700; /* Bold */
+            color: #FFD700; /* Gold/Yellow */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .subheader-text {
+            font-size: 1.5rem; /* Large for sub-header */
+            font-weight: 600; /* Semi-bold */
+            color: #FFA500; /* Orange-Yellow */
+        }
+        .btn-primary {
+            background-color: #FFD700; /* Yellow */
+            color: #333;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary:hover {
+            background-color: #FFC107; /* Slightly darker yellow */
+            transform: translateY(-2px);
+        }
+        .input-field {
+            border: 1px solid #FFD700;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            background-color: #FFF;
+            color: #333;
+        }
+        .card {
+            background-color: #FFF;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 1rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+       .h12{
+           margin: 0;
+           height: 300px;
+           width: 300px;
+           display: block;
+           margin-left: auto;
+           margin-right: auto;
+       }
+    </style>
+</head>
+
+<body>
+  
+    <nav class="h12">
+        <img src="Nakhon_Phanom_University_Logo.svg (1).png" alt="">
+    </nav>
+
+    <div class="min-h-screen flex flex-col items-center p-4">
+        <header class="text-center mb-8">
+            <h1 class="header-title text-5xl mb-2">ระบบเช็คชื่อเข้า-ออกห้องคอม</h1>
+            <p class="subheader-text text-xl" id="universityName">วิทยาลัยนาหว้า มหาวิทยาลัยนครพนม</p>
+            <p class="text-gray-500 text-sm mt-2">ข้อมูลถูกจัดเก็บในเครื่องของคุณเท่านั้น</p>
+        </header>
+
+        <nav class="mb-8 flex flex-wrap justify-center gap-4">
+            <button onclick="navigateTo('checkin')" class="btn-primary flex items-center">
+                <i class="fas fa-user-check mr-2"></i>เช็คชื่อ
+            </button>
+            <button onclick="navigateTo('report')" class="btn-primary flex items-center">
+                <i class="fas fa-clipboard-list mr-2"></i>รายงาน
+            </button>
+            <button onclick="navigateTo('statistics')" class="btn-primary flex items-center">
+                <i class="fas fa-chart-bar mr-2"></i>สถิติ
+            </button>
+            <button onclick="navigateTo('addStudent')" class="btn-primary flex items-center">
+                <i class="fas fa-user-plus mr-2"></i>จัดการนักเรียน
+            </button>
+            <button onclick="navigateTo('universitySettings')" class="btn-primary flex items-center">
+                <i class="fas fa-cog mr-2"></i>ตั้งค่ามหาวิทยาลัย
+            </button>
+        </nav>
+
+        <div id="app-content" class="w-full">
+            <div class="text-center text-gray-600 text-lg mt-10">กำลังโหลดระบบ...</div>
+        </div>
+
+        <div id="messageBox" class="modal fixed inset-0 flex items-center justify-center p-4" style="z-index: 1000; display: none;">
+            <div class="bg-white p-6 rounded-lg shadow-xl flex items-center">
+                <span id="messageText" class="text-lg font-semibold"></span>
+                <button class="ml-4 text-gray-500 hover:text-gray-700" onclick="document.getElementById('messageBox').style.display='none';">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="confirmDialog" class="modal fixed inset-0 flex items-center justify-center p-4" style="z-index: 1000; display: none;">
+            <div class="modal-content">
+                <span class="close-button" onclick="document.getElementById('confirmDialog').style.display='none';">&times;</span>
+                <p id="confirmMessage" class="text-lg font-semibold mb-4"></p>
+                <div class="flex justify-center space-x-4">
+                    <button id="confirmYesBtn" class="btn-primary bg-green-500 hover:bg-green-600 text-white">ใช่</button>
+                    <button id="confirmNoBtn" class="btn-primary bg-red-500 hover:bg-red-600 text-white">ไม่</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State and Utility Functions ---
+        let currentPage = 'checkin'; // Default page
+        const classes = ['ปวช.ปี 1', 'ปวช.ปี 2', 'ปวช.ปี 3', 'ปวส.ปี 1', 'ปวส.ปี 2'];
+        const rooms = ['201', '202', '203', '204', '205', '206', '207'];
+        let students = []; // All students loaded from Local Storage
+        let checkInRecords = []; // All check-in records loaded from Local Storage
+        let universityName = 'วิทยาลัยนาหว้า มหาวิทยาลัยนครพนม'; // Default university name
+
+        // Keys for Local Storage
+        const STUDENTS_KEY = 'checkin_students';
+        const CHECKINS_KEY = 'checkin_records';
+        const UNIVERSITY_SETTINGS_KEY = 'checkin_university_settings';
+
+        // Function to show a message to the user
+        function showMessage(message, type = 'success') {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageText.textContent = message;
+            messageBox.className = `modal fixed inset-0 flex items-center justify-center p-4 ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+            messageBox.style.display = 'flex';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 3000); // Hide after 3 seconds
+        }
+
+        // Function to show a confirmation dialog
+        function showConfirmDialog(message, onConfirm) {
+            const confirmDialog = document.getElementById('confirmDialog');
+            const confirmMessage = document.getElementById('confirmMessage');
+            const confirmYesBtn = document.getElementById('confirmYesBtn');
+            const confirmNoBtn = document.getElementById('confirmNoBtn');
+
+            confirmMessage.textContent = message;
+            confirmDialog.style.display = 'flex';
+
+            confirmYesBtn.onclick = () => {
+                confirmDialog.style.display = 'none';
+                onConfirm(true);
+            };
+            confirmNoBtn.onclick = () => {
+                confirmDialog.style.display = 'none';
+                onConfirm(false);
+            };
+        }
+
+        // --- Local Storage Operations ---
+
+        // Load university name from Local Storage
+        function loadUniversityNameFromLocalStorage() {
+            try {
+                const storedName = localStorage.getItem(UNIVERSITY_SETTINGS_KEY);
+                if (storedName) {
+                    universityName = JSON.parse(storedName).name;
+                } else {
+                    // ตั้งค่าเริ่มต้นถ้าไม่พบ
+                    universityName = 'วิทยาลัยนาหว้า มหาวิทยาลัยนครพนม';
+                    localStorage.setItem(UNIVERSITY_SETTINGS_KEY, JSON.stringify({ name: universityName }));
+                }
+                document.getElementById('universityName').textContent = universityName;
+            } catch (e) {
+                console.error("Error loading university name from local storage:", e);
+                universityName = 'วิทยาลัยนาหว้า มหาวิทยาลัยนครพนม'; // Fallback
+            }
+        }
+
+        // Save university name to Local Storage
+        function saveUniversityName(name) {
+            universityName = name;
+            localStorage.setItem(UNIVERSITY_SETTINGS_KEY, JSON.stringify({ name: name }));
+            document.getElementById('universityName').textContent = universityName;
+            showMessage('บันทึกชื่อมหาวิทยาลัยเรียบร้อยแล้ว');
+        }
+
+        // Load students from Local Storage
+        function loadStudentsFromLocalStorage() {
+            try {
+                const storedStudents = localStorage.getItem(STUDENTS_KEY);
+                students = storedStudents ? JSON.parse(storedStudents) : [];
+                // Sort students by class and studentId for consistent display
+                students.sort((a, b) => {
+                    const classA = classes.indexOf(a.class);
+                    const classB = classes.indexOf(b.class);
+                    if (classA !== classB) return classA - classB;
+                    // Assuming studentId is numeric or can be compared as numbers
+                    return parseInt(a.studentId) - parseInt(b.studentId);
+                });
+                if (currentPage === 'checkin') renderCheckinPage();
+                if (currentPage === 'addStudent') renderAddStudentPage();
+            } catch (e) {
+                console.error("Error loading students from local storage:", e);
+                students = []; // Reset if corrupted
+                showMessage('เกิดข้อผิดพลาดในการโหลดรายชื่อนักเรียน', 'error');
+            }
+        }
+
+        // Save students to Local Storage
+        function saveStudentsToLocalStorage() {
+            localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+            // Trigger re-render of relevant pages
+            if (currentPage === 'checkin') renderCheckinPage();
+            if (currentPage === 'addStudent') renderAddStudentPage();
+        }
+
+        // Add a new student to Local Storage
+        async function addStudent(studentData) {
+            // Check for duplicate student ID before adding
+            const isDuplicate = students.some(s => s.studentId === studentData.studentId);
+            if (isDuplicate) {
+                showMessage('รหัสนักเรียนนี้มีอยู่แล้ว กรุณาใช้รหัสอื่น', 'error');
+                return;
+            }
+
+            // Generate a unique ID for the new student
+            const newStudent = { id: Date.now().toString(), ...studentData };
+            students.push(newStudent);
+            saveStudentsToLocalStorage();
+            showMessage('เพิ่มนักเรียนเรียบร้อยแล้ว');
+        }
+
+        // Update an existing student in Local Storage
+        async function updateStudent(studentId, newData) {
+            const index = students.findIndex(s => s.id === studentId);
+            if (index !== -1) {
+                students[index] = { ...students[index], ...newData };
+                saveStudentsToLocalStorage();
+                showMessage('อัปเดตข้อมูลนักเรียนเรียบร้อยแล้ว');
+            } else {
+                showMessage('ไม่พบนักเรียนที่ต้องการอัปเดต', 'error');
+            }
+        }
+
+        // Delete a student from Local Storage
+        async function deleteStudent(studentId) {
+            showConfirmDialog('คุณแน่ใจหรือไม่ที่จะลบนักเรียนคนนี้? (ข้อมูลการเช็คชื่อของนักเรียนคนนี้จะไม่ถูกลบออกไป)', (confirmed) => {
+                if (confirmed) {
+                    students = students.filter(s => s.id !== studentId);
+                    saveStudentsToLocalStorage();
+                    showMessage('ลบนักเรียนเรียบร้อยแล้ว');
+                }
+            });
+        }
+
+        // Load check-in records from Local Storage
+        function loadCheckInRecordsFromLocalStorage() {
+            try {
+                const storedRecords = localStorage.getItem(CHECKINS_KEY);
+                checkInRecords = storedRecords ? JSON.parse(storedRecords) : [];
+                // Sort by date and time
+                checkInRecords.sort((a, b) => {
+                    const dateA = new Date(`${a.date}T${a.time}`);
+                    const dateB = new Date(`${b.date}T${b.time}`);
+                    return dateA - dateB;
+                });
+                if (currentPage === 'report') renderReportPage();
+                if (currentPage === 'statistics') renderStatisticsPage();
+            } catch (e) {
+                console.error("Error loading check-in records from local storage:", e);
+                checkInRecords = []; // Reset if corrupted
+                showMessage('เกิดข้อผิดพลาดในการโหลดบันทึกการเช็คชื่อ', 'error');
+            }
+        }
+
+        // Save check-in records to Local Storage
+        function saveCheckInRecordsToLocalStorage() {
+            localStorage.setItem(CHECKINS_KEY, JSON.stringify(checkInRecords));
+            // Trigger re-render of relevant pages
+            if (currentPage === 'report') renderReportPage();
+            if (currentPage === 'statistics') renderStatisticsPage();
+        }
+
+        // Save a check-in/out record to Local Storage
+        async function saveCheckInRecord(recordData) {
+            // Generate a unique ID for the new record
+            const newRecord = { id: Date.now().toString(), ...recordData };
+            checkInRecords.push(newRecord);
+            saveCheckInRecordsToLocalStorage();
+            showMessage('บันทึกเรียบร้อย');
+        }
+
+        // --- Page Rendering Functions ---
+
+        function navigateTo(page) {
+            currentPage = page;
+            renderCurrentPage();
+        }
+
+        function renderCurrentPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = ''; // Clear previous content
+
+            // No longer checking isAuthReady, assuming always ready with local storage
+            loadUniversityNameFromLocalStorage(); // Ensure name is always fresh
+            loadStudentsFromLocalStorage(); // Ensure students are always fresh
+            loadCheckInRecordsFromLocalStorage(); // Ensure records are always fresh
+
+            switch (currentPage) {
+                case 'checkin':
+                    renderCheckinPage();
+                    break;
+                case 'report':
+                    renderReportPage();
+                    break;
+                case 'statistics':
+                    renderStatisticsPage();
+                    break;
+                case 'addStudent':
+                    renderAddStudentPage();
+                    break;
+                case 'universitySettings':
+                    renderUniversitySettingsPage();
+                    break;
+                default:
+                    renderCheckinPage();
+            }
+        }
+
+        function renderCheckinPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = `
+                <div class="card w-full max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">เช็คชื่อเข้า-ออกห้องคอม</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label for="checkinDate" class="block text-gray-700 text-sm font-bold mb-2">เลือกวันที่:</label>
+                            <input type="date" id="checkinDate" class="input-field w-full" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div>
+                            <label for="checkinClass" class="block text-gray-700 text-sm font-bold mb-2">เลือกชั้น:</label>
+                            <select id="checkinClass" class="input-field w-full">
+                                ${classes.map(cls => `<option value="${cls}">${cls}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="checkinRoom" class="block text-gray-700 text-sm font-bold mb-2">เลือกห้อง:</label>
+                            <select id="checkinRoom" class="input-field w-full">
+                                ${rooms.map(room => `<option value="${room}">${room}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="studentListContainer" class="mb-6">
+                        <p class="text-center text-gray-500">เลือกชั้นเรียนเพื่อแสดงรายชื่อนักเรียน</p>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <button id="saveCheckinBtn" class="btn-primary">บันทึกข้อมูล</button>
+                    </div>
+                </div>
+            `;
+
+            const checkinDateInput = document.getElementById('checkinDate');
+            const checkinClassSelect = document.getElementById('checkinClass');
+            const checkinRoomSelect = document.getElementById('checkinRoom');
+            const studentListContainer = document.getElementById('studentListContainer');
+            const saveCheckinBtn = document.getElementById('saveCheckinBtn');
+
+            // Function to populate student list based on selected class
+            const populateStudentList = () => {
+                const selectedClass = checkinClassSelect.value;
+                const filteredStudents = students.filter(s => s.class === selectedClass);
+
+                if (filteredStudents.length === 0) {
+                    studentListContainer.innerHTML = '<p class="text-center text-gray-500">ไม่พบนักเรียนในชั้นเรียนนี้</p>';
+                    return;
+                }
+
+                studentListContainer.innerHTML = `
+                    <div class="bg-gray-50 p-4 rounded-lg shadow-inner max-h-96 overflow-y-auto">
+                        ${filteredStudents.map(student => `
+                            <div class="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
+                                <span class="text-gray-700 font-medium">${student.studentId} - ${student.name}</span>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="status-${student.id}" value="in" class="form-radio text-yellow-500" data-student-id="${student.id}" data-student-name="${student.name}" data-student-class="${student.class}">
+                                        <span class="ml-2 text-gray-700">เข้า</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="status-${student.id}" value="out" class="form-radio text-yellow-500" data-student-id="${student.id}" data-student-name="${student.name}" data-student-class="${student.class}">
+                                        <span class="ml-2 text-gray-700">ออก</span>
+                                    </label>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            };
+
+            // Event listeners
+            checkinClassSelect.addEventListener('change', populateStudentList);
+            checkinDateInput.addEventListener('change', populateStudentList); // Re-populate if date changes (though not strictly needed for list, good practice)
+
+            saveCheckinBtn.addEventListener('click', async () => {
+                const selectedDate = checkinDateInput.value;
+                const selectedClass = checkinClassSelect.value;
+                const selectedRoom = checkinRoomSelect.value;
+                const time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const radioButtons = document.querySelectorAll('#studentListContainer input[type="radio"]:checked');
+
+                if (radioButtons.length === 0) {
+                    showMessage('กรุณาเลือกสถานะเข้าหรือออกอย่างน้อยหนึ่งคน', 'error');
+                    return;
+                }
+
+                for (const radio of radioButtons) {
+                    const studentId = radio.dataset.studentId;
+                    const studentName = radio.dataset.studentName;
+                    const studentClass = radio.dataset.studentClass;
+                    const status = radio.value;
+
+                    const recordData = {
+                        studentId: studentId,
+                        studentName: studentName,
+                        class: studentClass,
+                        room: selectedRoom,
+                        date: selectedDate,
+                        time: time,
+                        type: status
+                    };
+                    await saveCheckInRecord(recordData); // Use local storage save function
+                }
+                // Optionally clear selections after saving
+                document.querySelectorAll('#studentListContainer input[type="radio"]').forEach(radio => radio.checked = false);
+            });
+
+            // Initial population
+            populateStudentList();
+        }
+
+        function renderReportPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = `
+                <div class="card w-full max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">รายงานการเช็คชื่อ</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label for="reportDate" class="block text-gray-700 text-sm font-bold mb-2">เลือกวันที่:</label>
+                            <input type="date" id="reportDate" class="input-field w-full" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div>
+                            <label for="reportClass" class="block text-gray-700 text-sm font-bold mb-2">เลือกชั้น:</label>
+                            <select id="reportClass" class="input-field w-full">
+                                <option value="">-- ทั้งหมด --</option>
+                                ${classes.map(cls => `<option value="${cls}">${cls}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="reportRoom" class="block text-gray-700 text-sm font-bold mb-2">เลือกห้อง:</label>
+                            <select id="reportRoom" class="input-field w-full">
+                                <option value="">-- ทั้งหมด --</option>
+                                ${rooms.map(room => `<option value="${room}">${room}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="reportResults" class="bg-gray-50 p-4 rounded-lg shadow-inner max-h-96 overflow-y-auto">
+                        <p class="text-center text-gray-500">เลือกวันที่และชั้นเรียนเพื่อดูรายงาน</p>
+                    </div>
+                </div>
+            `;
+
+            const reportDateInput = document.getElementById('reportDate');
+            const reportClassSelect = document.getElementById('reportClass');
+            const reportRoomSelect = document.getElementById('reportRoom');
+            const reportResultsDiv = document.getElementById('reportResults');
+
+            const generateReport = () => {
+                const selectedDate = reportDateInput.value;
+                const selectedClass = reportClassSelect.value;
+                const selectedRoom = reportRoomSelect.value;
+
+                let filteredRecords = checkInRecords.filter(record => record.date === selectedDate);
+
+                if (selectedClass) {
+                    filteredRecords = filteredRecords.filter(record => record.class === selectedClass);
+                }
+
+                if (selectedRoom) {
+                    filteredRecords = filteredRecords.filter(record => record.room === selectedRoom);
+                }
+
+                if (filteredRecords.length === 0) {
+                    reportResultsDiv.innerHTML = '<p class="text-center text-gray-500">ไม่พบข้อมูลการเช็คชื่อสำหรับเงื่อนไขที่เลือก</p>';
+                    return;
+                }
+
+                // Group records by student for better display
+                const studentRecords = {};
+                filteredRecords.forEach(record => {
+                    if (!studentRecords[record.studentId]) {
+                        studentRecords[record.studentId] = {
+                            studentId: record.studentId, // เก็บเลขที่สำหรับแสดงผล
+                            name: record.studentName,
+                            class: record.class,
+                            room: record.room,
+                            records: []
+                        };
+                    }
+                    studentRecords[record.studentId].records.push(record);
+                });
+
+                let reportHtml = `
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-yellow-100">
+                            <tr>
+                                <th class="py-2 px-4 text-left text-gray-700">เลขที่/ชื่อ</th>
+                                <th class="py-2 px-4 text-left text-gray-700">ชั้น</th>
+                                <th class="py-2 px-4 text-left text-gray-700">ห้อง</th>
+                                <th class="py-2 px-4 text-left text-gray-700">เวลาเข้า</th>
+                                <th class="py-2 px-4 text-left text-gray-700">เวลาออก</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+// ...existing code...
+Object.values(studentRecords).forEach(student => {
+    // หา object student จริงจาก students array เพื่อดึงเลขที่ (studentId) ที่ถูกต้อง
+    const realStudent = students.find(s => s.id === student.studentId);
+
+    // Sort records for this student by time to get first 'in' and last 'out'
+    const sortedStudentRecords = student.records.sort((a, b) => {
+        const timeA = new Date(`2000-01-01T${a.time}`);
+        const timeB = new Date(`2000-01-01T${b.time}`);
+        return timeA - timeB;
+    });
+
+    // หา record 'in' แรก และ 'out' สุดท้าย
+    const firstIn = sortedStudentRecords.find(r => r.type === 'in');
+    const lastOut = [...sortedStudentRecords].reverse().find(r => r.type === 'out');
+
+    // หาเลขห้องล่าสุดที่เช็คชื่อ (record สุดท้ายของวัน)
+    const latestRoom = sortedStudentRecords.length > 0 ? sortedStudentRecords[sortedStudentRecords.length - 1].room : student.room || '-';
+
+    reportHtml += `
+        <tr class="border-b border-gray-200 hover:bg-gray-50">
+            <td class="py-2 px-4">${realStudent ? realStudent.studentId : '-'} - ${student.name}</td>
+            <td class="py-2 px-4">${student.class}</td>
+            <td class="py-2 px-4">${latestRoom}</td>
+            <td class="py-2 px-4">${firstIn ? firstIn.time : '-'}</td>
+            <td class="py-2 px-4">${lastOut ? lastOut.time : '-'}</td>
+        </tr>
+    `;
+});
+// ...existing code...
+
+                reportHtml += `
+                        </tbody>
+                    </table>
+                `;
+                reportResultsDiv.innerHTML = reportHtml;
+            };
+
+            reportDateInput.addEventListener('change', generateReport);
+            reportClassSelect.addEventListener('change', generateReport);
+            reportRoomSelect.addEventListener('change', generateReport);
+
+            // Initial report generation
+            generateReport();
+        }
+
+        let checkinChartInstance = null;
+        function renderStatisticsPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = `
+                <div class="card w-full max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">สถิติการเช็คชื่อ</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-inner">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-700">ภาพรวมสถิติ:</h3>
+                            <div id="statisticsTextContent">
+                                <p class="text-center text-gray-500">กำลังคำนวณสถิติ...</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg shadow-inner flex flex-col items-center justify-center">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-700">กราฟแสดงการเช็คชื่อรายวัน:</h3>
+                            <canvas id="checkinChart" class="w-full h-auto max-h-96"></canvas>
+                            <p class="text-center text-gray-500 mt-2">ไม่มีข้อมูลกราฟ</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const statisticsTextContentDiv = document.getElementById('statisticsTextContent');
+            const chartCanvas = document.getElementById('checkinChart');
+
+            const calculateAndDrawStatistics = () => {
+                if (checkInRecords.length === 0) {
+                    statisticsTextContentDiv.innerHTML = '<p class="text-center text-gray-500">ไม่มีข้อมูลการเช็คชื่อเพื่อแสดงสถิติ</p>';
+                    chartCanvas.style.display = 'none'; // Hide canvas if no data
+                    chartCanvas.nextElementSibling.style.display = 'block'; // Show "no data" message
+                    return;
+                }
+
+                chartCanvas.style.display = 'block'; // Show canvas
+                chartCanvas.nextElementSibling.style.display = 'none'; // Hide "no data" message
+
+                const dailyCheckIns = {}; // { 'YYYY-MM-DD': { 'in': count, 'out': count, 'total': count } }
+                const classCheckIns = {}; // { 'Class Name': { 'in': count, 'out': count } }
+                const uniqueStudentsPerDay = {}; // { 'YYYY-MM-DD': Set<studentId> }
+
+                checkInRecords.forEach(record => {
+                    // Daily stats
+                    if (!dailyCheckIns[record.date]) {
+                        dailyCheckIns[record.date] = { in: 0, out: 0, total: 0 };
+                    }
+                    dailyCheckIns[record.date][record.type]++;
+                    dailyCheckIns[record.date].total++;
+
+                    // Class stats
+                    if (!classCheckIns[record.class]) {
+                        classCheckIns[record.class] = { in: 0, out: 0 };
+                    }
+                    classCheckIns[record.class][record.type]++;
+
+                    // Unique students per day
+                    if (!uniqueStudentsPerDay[record.date]) {
+                        uniqueStudentsPerDay[record.date] = new Set();
+                    }
+                    uniqueStudentsPerDay[record.date].add(record.studentId);
+                });
+
+                let totalCheckIns = checkInRecords.length;
+                let totalStudentsCheckedIn = new Set(checkInRecords.map(record => record.studentId)).size;
+                let totalUniqueDays = Object.keys(dailyCheckIns).length;
+                let avgCheckInsPerDay = totalUniqueDays > 0 ? (totalCheckIns / totalUniqueDays).toFixed(2) : 0;
+
+                let dailyStatsHtml = `
+                    <p class="mb-2"><strong class="text-yellow-600">จำนวนการเช็คชื่อทั้งหมด:</strong> ${totalCheckIns} ครั้ง</p>
+                    <p class="mb-2"><strong class="text-yellow-600">จำนวนนักเรียนที่ไม่ซ้ำกันที่เช็คชื่อ:</strong> ${totalStudentsCheckedIn} คน</p>
+                    <p class="mb-2"><strong class="text-yellow-600">จำนวนวันที่เช็คชื่อ:</strong> ${totalUniqueDays} วัน</p>
+                    <p class="mb-2"><strong class="text-yellow-600">ค่าเฉลี่ยการเช็คชื่อต่อวัน:</strong> ${avgCheckInsPerDay} ครั้ง/วัน</p>
+                    <h4 class="text-lg font-semibold mt-4 mb-2 text-gray-700">สถิติแยกตามชั้นเรียน:</h4>
+                    <ul>
+                `;
+                for (const cls of classes) {
+                    const stats = classCheckIns[cls] || { in: 0, out: 0 };
+                    dailyStatsHtml += `<li><strong class="text-yellow-600">${cls}:</strong> เข้า ${stats.in} ครั้ง, ออก ${stats.out} ครั้ง</li>`;
+                }
+                dailyStatsHtml += `</ul>`;
+                statisticsTextContentDiv.innerHTML = dailyStatsHtml;
+
+                // Prepare data for Chart.js
+                const sortedDates = Object.keys(dailyCheckIns).sort();
+                const checkInCounts = sortedDates.map(date => dailyCheckIns[date].in);
+                const checkOutCounts = sortedDates.map(date => dailyCheckIns[date].out);
+
+                if (checkinChartInstance) {
+                    checkinChartInstance.destroy(); // Destroy previous chart instance
+                }
+
+                checkinChartInstance = new Chart(chartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [
+                            {
+                                label: 'จำนวนเข้า',
+                                data: checkInCounts,
+                                backgroundColor: 'rgba(255, 215, 0, 0.6)', // Gold/Yellow with transparency
+                                borderColor: 'rgba(255, 215, 0, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'จำนวนออก',
+                                data: checkOutCounts,
+                                backgroundColor: 'rgba(255, 165, 0, 0.6)', // Orange-Yellow with transparency
+                                borderColor: 'rgba(255, 165, 0, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'จำนวนครั้ง'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'วันที่'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return `วันที่: ${context[0].label}`;
+                                    },
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw} ครั้ง`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+            calculateAndDrawStatistics();
+        }
+
+        function renderAddStudentPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = `
+                <div class="card w-full max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">จัดการข้อมูลนักเรียน</h2>
+
+                    <div class="mb-8 p-6 bg-yellow-50 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">เพิ่มนักเรียนใหม่</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="newStudentId" class="block text-gray-700 text-sm font-bold mb-2">รหัสนักเรียน:</label>
+                                <input type="text" id="newStudentId" class="input-field w-full" placeholder="เช่น 6xxxxxxx">
+                            </div>
+                            <div>
+                                <label for="newStudentName" class="block text-gray-700 text-sm font-bold mb-2">ชื่อ-นามสกุล:</label>
+                                <input type="text" id="newStudentName" class="input-field w-full" placeholder="เช่น นายสมชาย ใจดี">
+                            </div>
+                            <div>
+                                <label for="newStudentClass" class="block text-gray-700 text-sm font-bold mb-2">ชั้นเรียน:</label>
+                                <select id="newStudentClass" class="input-field w-full">
+                                    ${classes.map(cls => `<option value="${cls}">${cls}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-6">
+                            <button id="addStudentBtn" class="btn-primary">
+                                <i class="fas fa-plus mr-2"></i>เพิ่มนักเรียน
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-gray-50 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700">รายชื่อนักเรียน</h3>
+                        <div id="studentManagementList" class="max-h-96 overflow-y-auto">
+                            <p class="text-center text-gray-500">กำลังโหลดรายชื่อนักเรียน...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const newStudentIdInput = document.getElementById('newStudentId');
+            const newStudentNameInput = document.getElementById('newStudentName');
+            const newStudentClassSelect = document.getElementById('newStudentClass');
+            const addStudentBtn = document.getElementById('addStudentBtn');
+            const studentManagementListDiv = document.getElementById('studentManagementList');
+
+            addStudentBtn.addEventListener('click', async () => {
+                const studentId = newStudentIdInput.value.trim();
+                const studentName = newStudentNameInput.value.trim();
+                const studentClass = newStudentClassSelect.value;
+
+                if (!studentId || !studentName || !studentClass) {
+                    showMessage('กรุณากรอกข้อมูลนักเรียนให้ครบถ้วน', 'error');
+                    return;
+                }
+
+                await addStudent({
+                    studentId,
+                    name: studentName,
+                    class: studentClass
+                });
+
+                newStudentIdInput.value = '';
+                newStudentNameInput.value = '';
+                newStudentClassSelect.value = classes[0]; // Reset to first class
+            });
+
+            const renderStudentManagementList = () => {
+                if (students.length === 0) {
+                    studentManagementListDiv.innerHTML = '<p class="text-center text-gray-500">ยังไม่มีข้อมูลนักเรียน</p>';
+                    return;
+                }
+
+                studentManagementListDiv.innerHTML = `
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-yellow-100">
+                            <tr>
+                                <th class="py-2 px-4 text-left text-gray-700">รหัสนักเรียน</th>
+                                <th class="py-2 px-4 text-left text-gray-700">ชื่อ-นามสกุล</th>
+                                <th class="py-2 px-4 text-left text-gray-700">ชั้นเรียน</th>
+                                <th class="py-2 px-4 text-left text-gray-700">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${students.map(student => `
+                                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                                    <td class="py-2 px-4">
+                                        <input type="text" value="${student.studentId}" data-id="${student.id}" data-field="studentId" class="input-field w-24 text-sm" onchange="updateStudentField(this)">
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <input type="text" value="${student.name}" data-id="${student.id}" data-field="name" class="input-field w-40 text-sm" onchange="updateStudentField(this)">
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <select data-id="${student.id}" data-field="class" class="input-field w-28 text-sm" onchange="updateStudentField(this)">
+                                            ${classes.map(cls => `<option value="${cls}" ${student.class === cls ? 'selected' : ''}>${cls}</option>`).join('')}
+                                        </select>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <button onclick="deleteStudent('${student.id}')" class="text-red-600 hover:text-red-800">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            };
+
+            // Global function for updating student fields from input/select
+            window.updateStudentField = async (element) => {
+                const studentId = element.dataset.id;
+                const field = element.dataset.field;
+                const value = element.value;
+                const newData = { [field]: value };
+                await updateStudent(studentId, newData);
+            };
+
+            // Initial render of student list
+            renderStudentManagementList();
+        }
+
+        function renderUniversitySettingsPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = `
+                <div class="card w-full max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">ตั้งค่าชื่อสถาบัน</h2>
+                    <div class="mb-4">
+                        <label for="universityNameInput" class="block text-gray-700 text-sm font-bold mb-2">ชื่อสถาบัน:</label>
+                        <input type="text" id="universityNameInput" class="input-field w-full" value="${universityName}" placeholder="เช่น มหาวิทยาลัยนครพนม">
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="saveUniversityNameBtn" class="btn-primary">
+                            <i class="fas fa-save mr-2"></i>บันทึกชื่อสถาบัน
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const universityNameInput = document.getElementById('universityNameInput');
+            const saveUniversityNameBtn = document.getElementById('saveUniversityNameBtn');
+
+            saveUniversityNameBtn.addEventListener('click', () => {
+                const newName = universityNameInput.value.trim();
+                if (newName) {
+                    saveUniversityName(newName); // Use local storage save function
+                } else {
+                    showMessage('กรุณากรอกชื่อสถาบัน', 'error');
+                }
+            });
+        }
+
+        // Initialize the app when the window loads
+        window.onload = () => {
+            // Since we are using Local Storage, the app is "ready" immediately
+            loadUniversityNameFromLocalStorage();
+            loadStudentsFromLocalStorage();
+            loadCheckInRecordsFromLocalStorage();
+            renderCurrentPage(); // Render the default page
+        };
+    </script>
+</body>
+</html>
